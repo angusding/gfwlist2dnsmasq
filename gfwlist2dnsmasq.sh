@@ -22,12 +22,13 @@ usage() {
 		            DNS Port for the GfwList Domains (Default: 5353)
 		    -s <ipset_name>
 		            Ipset name for the GfwList domains (Default: ss_spec_dst_fw)
+		            Set blank ("") to disable ipset output
 		    -o <FILE>
 		            /path/to/output_filename (Required)
 		    -i
 		            Force bypass certificate validation (Insecure)
 		    -h
-		            Show this message.
+		            Show this message
 	EOF
 	exit $1
 }
@@ -101,7 +102,9 @@ all_process() {
 				sub(/^www[0-9]*\./, "", $0)
 			}
 			printf "server=/%s/%s#%d\n", $0, dns_ip, dns_port
-			printf "ipset=/%s/%s\n", $0, ipset_name
+			if ( ipset_name != "" ) {
+				printf "ipset=/%s/%s\n", $0, ipset_name
+			}
 		}' >"$IPSET_TMP_FILE" || clean_and_exit 1
 
 	ipset_file_bak=""
@@ -123,22 +126,30 @@ all_process() {
 	EOF
 
 	if [ "$(cat "$IPSET_FILE" 2>/dev/null | wc -l)" -le 4 ]; then
-		if [ -n "$ipset_file_bak" ]; then
-			mv -f "$ipset_file_bak" "$IPSET_FILE"
-		fi
+		[ -n "$ipset_file_bak" ] && mv -f "$ipset_file_bak" "$IPSET_FILE"
 		clean_and_exit 1
 	fi
 
 	echo "Done."
+
+	[ -n "$ipset_file_bak" ] && rm -f "$ipset_file_bak"
 	clean_and_exit 0
 }
 
 while getopts 'd:p:s:o:ih' arg; do
 	case $arg in
 		d)
+			[ -n "$OPTARG" ] || {
+				echo "Invalid DNS IP."
+				exit 1
+			}
 			DNS_IP="$OPTARG"
 			;;
 		p)
+			[ -n "$OPTARG" ] || {
+				echo "Invalid DNS port."
+				exit 1
+			}
 			DNS_PORT="$OPTARG"
 			;;
 		s)
@@ -161,7 +172,7 @@ done
 
 [ -n "$IPSET_FILE" ] || {
 	echo 'Invalid output filename.'
-	usage 1
+	exit 1
 }
 
 all_process
