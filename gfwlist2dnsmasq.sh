@@ -9,7 +9,7 @@ GFWLIST_URL='https://github.com/gfwlist/gfwlist/raw/master/gfwlist.txt'
 
 DNS_IP='127.0.0.1'
 DNS_PORT='5353'
-IPSET_NAME='ss_spec_dst_fw'
+IPSET_NAME='gfwlist'
 IPSET_FILE=""
 
 usage() {
@@ -125,14 +125,14 @@ all_process() {
 		$(cat "$IPSET_TMP_FILE" 2>/dev/null)
 	EOF
 
-	if [ "$(cat "$IPSET_FILE" 2>/dev/null | wc -l)" -le 4 ]; then
+	if [ "$(awk 'END { print NR }' "$IPSET_FILE" 2>/dev/null)" -le 4 ]; then
 		[ -n "$ipset_file_bak" ] && mv -f "$ipset_file_bak" "$IPSET_FILE"
 		clean_and_exit 1
 	fi
 
-	echo "Done."
-
 	[ -n "$ipset_file_bak" ] && rm -f "$ipset_file_bak"
+
+	echo "Done."
 	clean_and_exit 0
 }
 
